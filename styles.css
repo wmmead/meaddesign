@@ -43,3 +43,37 @@ h1 {
     font-size: 10vw;
     opacity: 0;
 }
+
+#audio-btn {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    padding: 0.6em 1.2em;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 999px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+}
+
+#playing {
+    color: white;
+    font-size: 12px;
+    position: fixed;
+    bottom: 15px;
+    left: 15px;
+    width: 85%;
+}
+
+#playing-list span {
+    opacity: 0;
+}
+
+#playing-list span:not(:last-child)::after {
+    content: ', ';
+}

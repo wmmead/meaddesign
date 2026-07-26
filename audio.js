@@ -1,0 +1,176 @@
+// ---------------------------------------------------------------------
+// Add or remove filenames here to change which tracks are eligible to
+// be picked. Paths are relative to this file (i.e. inside the audio/
+// folder).
+// ---------------------------------------------------------------------
+var AUDIO_TRACKS = [
+    'audio/01-wholepiece.mp3',
+    'audio/07-Fluss.mp3',
+    'audio/07-decent-sampler-1.mp3',
+    'audio/07-decent-sampler2.mp3',
+    'audio/07-ruismaker-noir.mp3',
+    'audio/08-bassline.mp3',
+    'audio/08-decent-sampler-1.mp3',
+    'audio/08-decent-sampler-2.mp3',
+    'audio/08-ruismaker-noir.mp3',
+    'audio/11-animoog-1.mp3',
+    'audio/11-animoog-2.mp3',
+    'audio/11-decent-sampler.mp3',
+    'audio/11-soundbox.mp3',
+    'audio/11-synthmaster.mp3',
+    'audio/12-decent-sampler.mp3',
+    'audio/12-ruismaker-noir.mp3',
+    'audio/12-synthmaster-1.mp3',
+    'audio/12-synthmaster-2.mp3',
+    'audio/13-decent-sampler-2.mp3',
+    'audio/13-decentsampler-1.mp3',
+    'audio/13-fluss-1.mp3',
+    'audio/13-fluss-2.mp3',
+    'audio/13-ruismaker-noir.mp3',
+    'audio/13-synthmaster.mp3',
+    'audio/15-dm10.mp3',
+    'audio/15-j6-synth.mp3',
+    'audio/16-decent-sampler.mp3',
+    'audio/16-dm10.mp3',
+    'audio/16-j6-synth.mp3',
+    'audio/16-synthmaster.mp3',
+    'audio/18-battlestation.mp3',
+    'audio/18-decent-sampler.mp3',
+    'audio/18-dm10.mp3',
+    'audio/18-j6-synth.mp3',
+    'audio/20-battlestation.mp3',
+    'audio/20-decent-sampler.mp3',
+    'audio/20-j6-synth.mp3',
+    'audio/20-synthmaster.mp3',
+    'audio/21-decent-sampler.mp3',
+    'audio/21-dm10.mp3',
+    'audio/21-rozeta-collider.mp3',
+    'audio/21-synthmaster.mp3',
+    'audio/24-decent-sampler.mp3',
+    'audio/24-dm10.mp3',
+    'audio/24-j6-synth.mp3',
+    'audio/24-wave-cloud.mp3',
+    'audio/25-battlestation.mp3',
+    'audio/25-decent-sampler.mp3',
+    'audio/25-j6-synth.mp3',
+    'audio/25-ruismaker-noir.mp3',
+    'audio/25-synthmaster.mp3'
+];
+
+var FADE_IN_DURATION = 5;
+var TRIGGER_PROGRESS = 0.33;
+var MUTE_FADE_DURATION = 2;
+var TEXT_FADE_DURATION = 1;
+
+var playingTracks = new Set();
+var activeAudioElements = new Set();
+var isMuted = false;
+var playingLabels = new Map();
+
+var playingEl = document.getElementById('playing');
+playingEl.textContent = 'Playing: ';
+var playingList = document.createElement('span');
+playingList.id = 'playing-list';
+playingEl.appendChild(playingList);
+
+function addPlayingLabel(src) {
+    var span = document.createElement('span');
+    span.textContent = src.split('/').pop();
+    playingList.appendChild(span);
+    gsap.to(span, { opacity: 1, duration: TEXT_FADE_DURATION });
+    playingLabels.set(src, span);
+}
+
+function removePlayingLabel(src) {
+    var span = playingLabels.get(src);
+    if (!span) {
+        return;
+    }
+    playingLabels.delete(src);
+    gsap.to(span, {
+        opacity: 0,
+        duration: TEXT_FADE_DURATION,
+        onComplete: function () {
+            span.remove();
+        }
+    });
+}
+
+function pickRandomTrack() {
+    var available = AUDIO_TRACKS.filter(function (track) {
+        return !playingTracks.has(track);
+    });
+
+    if (available.length === 0) {
+        return null;
+    }
+
+    return available[Math.floor(Math.random() * available.length)];
+}
+
+function playTrack(src) {
+    playingTracks.add(src);
+
+    var audio = new Audio(src);
+    audio.volume = 0;
+    activeAudioElements.add(audio);
+    addPlayingLabel(src);
+
+    var triggeredNext = false;
+
+    audio.addEventListener('timeupdate', function () {
+        if (!triggeredNext && audio.duration && audio.currentTime / audio.duration >= TRIGGER_PROGRESS) {
+            triggeredNext = true;
+            startNextTrack();
+        }
+    });
+
+    audio.addEventListener('ended', function () {
+        playingTracks.delete(src);
+        activeAudioElements.delete(audio);
+        removePlayingLabel(src);
+    });
+
+    audio.play().catch(function (err) {
+        console.error('Playback failed for ' + src + ':', err);
+    });
+
+    if (!isMuted) {
+        gsap.to(audio, { volume: 1, duration: FADE_IN_DURATION });
+    }
+}
+
+function startNextTrack() {
+    var track = pickRandomTrack();
+    if (track) {
+        playTrack(track);
+    }
+}
+
+var audioBtn = document.getElementById('audio-btn');
+var audioStarted = false;
+
+audioBtn.addEventListener('click', function () {
+    if (!audioStarted) {
+        audioStarted = true;
+        startNextTrack();
+
+        var rect = audioBtn.getBoundingClientRect();
+        gsap.set(audioBtn, { top: rect.top, left: rect.left, transform: 'none' });
+        gsap.to(audioBtn, {
+            top: 20,
+            left: 20,
+            duration: 1,
+            ease: 'power2.inOut'
+        });
+
+        audioBtn.textContent = 'Mute';
+        return;
+    }
+
+    isMuted = !isMuted;
+    activeAudioElements.forEach(function (audio) {
+        gsap.to(audio, { volume: isMuted ? 0 : 1, duration: MUTE_FADE_DURATION });
+    });
+    audioBtn.textContent = isMuted ? 'Play' : 'Mute';
+});
