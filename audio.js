@@ -4,7 +4,6 @@
 // folder).
 // ---------------------------------------------------------------------
 var AUDIO_TRACKS = [
-    'audio/01-wholepiece.mp3',
     'audio/07-Fluss.mp3',
     'audio/07-decent-sampler-1.mp3',
     'audio/07-decent-sampler2.mp3',
@@ -44,7 +43,6 @@ var AUDIO_TRACKS = [
     'audio/20-synthmaster.mp3',
     'audio/21-decent-sampler.mp3',
     'audio/21-dm10.mp3',
-    'audio/21-rozeta-collider.mp3',
     'audio/21-synthmaster.mp3',
     'audio/24-decent-sampler.mp3',
     'audio/24-dm10.mp3',
@@ -54,7 +52,18 @@ var AUDIO_TRACKS = [
     'audio/25-decent-sampler.mp3',
     'audio/25-j6-synth.mp3',
     'audio/25-ruismaker-noir.mp3',
-    'audio/25-synthmaster.mp3'
+    'audio/25-synthmaster.mp3',
+    'audio/26-animoog.mp3',
+    'audio/26-decent-sampler.mp3',
+    'audio/26-dm10.mp3',
+    'audio/26-jsynth.mp3',
+    'audio/26-reverie.mp3',
+    'audio/27-decent-sampler.mp3',
+    'audio/27-j6synth.mp3',
+    'audio/27-reverie-choral.mp3',
+    'audio/27-reverie-frozen-time.mp3',
+    'audio/27-ruismaker-noir.mp3',
+    'audio/27-synthmaster.mp3',
 ];
 
 var FADE_IN_DURATION = 5;
