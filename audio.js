@@ -70,6 +70,11 @@ var FADE_IN_DURATION = 5;
 var TRIGGER_PROGRESS = 0.33;
 var MUTE_FADE_DURATION = 2;
 var TEXT_FADE_DURATION = 1;
+var REMIX_FADE_DURATION = 2;
+var REMIX_COOLDOWN = 20;
+var MAX_CONCURRENT_TRACKS = 3;
+var PRUNE_FADE_DURATION = 2;
+var PRUNE_CHECK_INTERVAL = 60000;
 
 var playingTracks = new Set();
 var activeAudioElements = new Set();
@@ -117,10 +122,11 @@ function pickRandomTrack() {
     return available[Math.floor(Math.random() * available.length)];
 }
 
-function playTrack(src) {
+function playTrack(src, fadeInDuration) {
     playingTracks.add(src);
 
     var audio = new Audio(src);
+    audio.trackSrc = src;
     audio.volume = 0;
     activeAudioElements.add(audio);
     addPlayingLabel(src);
@@ -145,7 +151,7 @@ function playTrack(src) {
     });
 
     if (!isMuted) {
-        gsap.to(audio, { volume: 1, duration: FADE_IN_DURATION });
+        gsap.to(audio, { volume: 1, duration: fadeInDuration || FADE_IN_DURATION });
     }
 }
 
@@ -156,8 +162,53 @@ function startNextTrack() {
     }
 }
 
+function fadeOutAndRemoveTrack(audio, duration) {
+    var src = audio.trackSrc;
+
+    gsap.to(audio, {
+        volume: 0,
+        duration: duration,
+        onComplete: function () {
+            audio.pause();
+            playingTracks.delete(src);
+            activeAudioElements.delete(audio);
+            removePlayingLabel(src);
+        }
+    });
+}
+
+function removeRandomActiveTrack(duration) {
+    var activeList = Array.from(activeAudioElements);
+    if (activeList.length === 0) {
+        return;
+    }
+
+    var audioToRemove = activeList[Math.floor(Math.random() * activeList.length)];
+    fadeOutAndRemoveTrack(audioToRemove, duration);
+}
+
+function remixOneTrack() {
+    if (activeAudioElements.size > 1) {
+        removeRandomActiveTrack(REMIX_FADE_DURATION);
+    }
+
+    var track = pickRandomTrack();
+    if (track) {
+        playTrack(track, REMIX_FADE_DURATION);
+    }
+}
+
+setInterval(function () {
+    if (activeAudioElements.size > MAX_CONCURRENT_TRACKS) {
+        removeRandomActiveTrack(PRUNE_FADE_DURATION);
+    }
+}, PRUNE_CHECK_INTERVAL);
+
 var audioBtn = document.getElementById('audio-btn');
 var audioStarted = false;
+
+var remixBtn = document.getElementById('remix');
+var remixLabel = remixBtn.textContent;
 
 audioBtn.addEventListener('click', function () {
     if (!audioStarted) {
@@ -170,7 +221,13 @@ audioBtn.addEventListener('click', function () {
             top: 20,
             left: 20,
             duration: 1,
-            ease: 'power2.inOut'
+            ease: 'power2.inOut',
+            onComplete: function () {
+                var audioBtnRect = audioBtn.getBoundingClientRect();
+                gsap.set(remixBtn, { top: 20, left: audioBtnRect.right + 10 });
+                gsap.to(remixBtn, { opacity: 1, duration: 0.5 });
+                remixBtn.style.pointerEvents = 'auto';
+            }
         });
 
         audioBtn.textContent = 'Mute';
@@ -182,4 +239,25 @@ audioBtn.addEventListener('click', function () {
         gsap.to(audio, { volume: isMuted ? 0 : 1, duration: MUTE_FADE_DURATION });
     });
     audioBtn.textContent = isMuted ? 'Play' : 'Mute';
+});
+
+remixBtn.addEventListener('click', function () {
+    remixOneTrack();
+
+    var remaining = REMIX_COOLDOWN;
+    remixBtn.disabled = true;
+    gsap.to(remixBtn, { opacity: 0.5, duration: 0.3 });
+    remixBtn.textContent = remaining + ' seconds';
+
+    var countdown = setInterval(function () {
+        remaining -= 1;
+        remixBtn.textContent = remaining + ' seconds';
+
+        if (remaining <= 0) {
+            clearInterval(countdown);
+            remixBtn.disabled = false;
+            gsap.to(remixBtn, { opacity: 1, duration: 0.3 });
+            remixBtn.textContent = remixLabel;
+        }
+    }, 1000);
 });
