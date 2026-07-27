@@ -8,7 +8,6 @@ var AUDIO_TRACKS = [
     'audio/07-decent-sampler-1.mp3',
     'audio/07-decent-sampler2.mp3',
     'audio/07-ruismaker-noir.mp3',
-    'audio/08-bassline.mp3',
     'audio/08-decent-sampler-1.mp3',
     'audio/08-decent-sampler-2.mp3',
     'audio/08-ruismaker-noir.mp3',
@@ -201,6 +200,8 @@ function remixOneTrack() {
 setInterval(function () {
     if (activeAudioElements.size > MAX_CONCURRENT_TRACKS) {
         removeRandomActiveTrack(PRUNE_FADE_DURATION);
+    } else if (activeAudioElements.size === 0 && audioStarted) {
+        startNextTrack();
     }
 }, PRUNE_CHECK_INTERVAL);
 
@@ -208,7 +209,20 @@ var audioBtn = document.getElementById('audio-btn');
 var audioStarted = false;
 
 var remixBtn = document.getElementById('remix');
-var remixLabel = remixBtn.textContent;
+var remixLabelOff = remixBtn.textContent;
+var remixLabelOn = 'mess with the audio';
+
+var parentalCheckbox = document.querySelector('#parental input[type="checkbox"]');
+
+function currentRemixLabel() {
+    return parentalCheckbox.checked ? remixLabelOn : remixLabelOff;
+}
+
+parentalCheckbox.addEventListener('change', function () {
+    if (!remixBtn.disabled) {
+        remixBtn.textContent = currentRemixLabel();
+    }
+});
 
 audioBtn.addEventListener('click', function () {
     if (!audioStarted) {
@@ -257,7 +271,7 @@ remixBtn.addEventListener('click', function () {
             clearInterval(countdown);
             remixBtn.disabled = false;
             gsap.to(remixBtn, { opacity: 1, duration: 0.3 });
-            remixBtn.textContent = remixLabel;
+            remixBtn.textContent = currentRemixLabel();
         }
     }, 1000);
 });

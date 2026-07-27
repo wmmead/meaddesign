@@ -42,6 +42,7 @@ h1 {
     font-weight: 300;
     font-size: 10vw;
     opacity: 0;
+    user-select: none;
 }
 
 .btn {
@@ -92,6 +93,24 @@ h1 {
     content: ', ';
 }
 
+#parental {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+#parental p {
+    margin: 0;
+    user-select: none;
+}
+
 /* Container wrapping the toggle switch */
 .switch {
   position: relative;
@@ -115,7 +134,7 @@ h1 {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: rgba(255, 255, 255, 0.15);
   border-radius: 34px;
   transition: background-color 0.3s ease;
 }
@@ -148,7 +167,7 @@ h1 {
 
 /* State changes when the switch is ON */
 .switch input:checked + .slider {
-  background-color: #4CAF50; /* Changes track to green */
+  background-color: rgba(76, 175, 80, 0.8); /* Changes track to green */
 }
 
 /* Switch the text content and position when ON */
