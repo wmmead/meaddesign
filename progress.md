@@ -73,6 +73,50 @@ the repo). If deploying, that folder needs to be uploaded separately.
   - If every track happens to be playing already when a trigger fires, it
     just skips that spawn — no error, another track's cascade/ended event
     will eventually free one up.
+- **Remix button** (`#remix` in `index.html`, starts hidden/`opacity:0`/
+  `pointer-events:none` in CSS):
+  - Revealed by the `audio-btn` click handler's `onComplete`, once the mute
+    button finishes animating into its corner — positioned immediately to
+    its right (`top:20`, `left` = mute button's right edge + 10px) and
+    faded in.
+  - Click → `remixOneTrack()`: if more than one track is currently playing,
+    fades out + removes one random track (`REMIX_FADE_DURATION` = 2s);
+    if only one track is playing, it *skips* the removal and just adds a
+    second (never drops to zero via remix). Either way, a new random track
+    is always added with a 2s fade-in.
+  - While running, the button is disabled, dimmed to 0.5 opacity (via GSAP,
+    not a raw style set — see gotcha below), and counts down
+    "20 seconds" → "0 seconds" (`REMIX_COOLDOWN`), then re-enables and
+    restores its idle label.
+  - **Gotcha already hit once**: don't use a plain `el.style.opacity = ...`
+    for the disabled-dim state if GSAP might still be animating that same
+    element's opacity (e.g. its own reveal fade). GSAP will keep overwriting
+    a raw style write on every tick until its tween finishes. Route it
+    through `gsap.to(...)` instead so GSAP's own overwrite management
+    handles the conflict correctly regardless of click timing.
+- **Concurrency management** (a `setInterval` every `PRUNE_CHECK_INTERVAL`
+  = 60s):
+  - If more than `MAX_CONCURRENT_TRACKS` (3) tracks are playing (the
+    cascade can drift upward over time), randomly removes one via the same
+    fade-out helper (`fadeOutAndRemoveTrack`, shared with the remix logic).
+  - If *zero* tracks are playing (can happen if tracks end faster than the
+    cascade replaces them) **and** playback has been started at least once
+    (`audioStarted`), starts a new random track. The `audioStarted` guard
+    just prevents this from kicking off playback before the user has ever
+    clicked the start button.
+- **Parental controls toggle** (`#parental` in `index.html`, top-right
+  corner, a checkbox styled as an ON/OFF pill switch):
+  - Purely cosmetic on the remix button so far: toggling it swaps the
+    button's idle label between `"fuck with the audio"` (off) and
+    `"mess with the audio"` (on) via `currentRemixLabel()`.
+  - Toggling while the remix button is idle updates the label immediately;
+    toggling mid-countdown does *not* interrupt the "N seconds" display —
+    the countdown's completion handler calls `currentRemixLabel()` fresh
+    (not a value captured at click time), so it always reflects whatever
+    the toggle's current state is when the countdown ends, however many
+    times it was flipped in between.
+  - No other behavior is wired to this toggle yet — actual "parental
+    controls" content-gating logic (if any) is still unimplemented.
 - **"Playing:" label** (`#playing` paragraph in `index.html`):
   - Built by JS: a static "Playing: " prefix + a `#playing-list` span
     container.
@@ -90,6 +134,26 @@ button's click handler (a real user gesture). All subsequent programmatic
 `.play()` calls (triggered later via `timeupdate`) rely on Chrome's
 per-page "autoplay unlocked after one user gesture" behavior — this has
 been verified working in testing.
+
+**Testing notes** (for verifying audio.js changes without real mp3 files
+or real wall-clock waits):
+- Mock `window.Audio` via Playwright's `page.addInitScript` (before
+  navigation) with a small class exposing `volume`/`duration`/`currentTime`
+  and firing `timeupdate`/`ended` listeners on demand — lets you drive the
+  cascade/selection/pool logic deterministically and instantly.
+- For the 60s concurrency check specifically, `page.clock.install()` +
+  `page.clock.fastForward(61000)` reliably fires the `setInterval` without
+  a real 60s wait. Caveat: fast-forwarding while a *GSAP* tween is also
+  active on the same element can produce weird/unreliable intermediate
+  values (GSAP's rAF-driven ticker doesn't play cleanly with Playwright's
+  fake clock) — trust the discrete state transitions (Set sizes, DOM
+  counts) over exact volume readings taken mid-fastForward.
+- `REMIX_COOLDOWN` can be overridden live via `page.evaluate(() => {
+  window.REMIX_COOLDOWN = 3; })` *after* page load to speed up the
+  20s-countdown tests, since the click handler reads it fresh each click.
+  This trick does NOT work for `PRUNE_CHECK_INTERVAL`, since that value is
+  baked into the `setInterval(...)` call once at script load — use the
+  Clock API for that one instead.
 
 ## Repo / tooling notes
 
