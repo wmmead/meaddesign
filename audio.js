@@ -80,6 +80,36 @@ var activeAudioElements = new Set();
 var isMuted = false;
 var playingLabels = new Map();
 
+// "roundBars + bar-level colorMode" preset from the audioMotion-analyzer
+// fluid demo (https://audiomotion.dev/demo/fluid.html).
+var audioMotion = new AudioMotionAnalyzer(document.getElementById('visualizer'), {
+    mode: 2,
+    alphaBars: false,
+    ansiBands: false,
+    barSpace: 0.25,
+    channelLayout: 'single',
+    colorMode: 'bar-level',
+    frequencyScale: 'log',
+    gradient: 'prism',
+    ledBars: false,
+    linearAmplitude: true,
+    linearBoost: 1.6,
+    lumiBars: false,
+    maxFreq: 16000,
+    minFreq: 30,
+    mirror: 0,
+    overlay: true,
+    radial: false,
+    reflexRatio: 0.5,
+    reflexAlpha: 1,
+    roundBars: true,
+    showBgColor: false,
+    showPeaks: false,
+    showScaleX: false,
+    smoothing: 0.7,
+    weightingFilter: 'D'
+});
+
 var playingEl = document.getElementById('playing');
 playingEl.textContent = 'Playing: ';
 var playingList = document.createElement('span');
@@ -129,6 +159,7 @@ function playTrack(src, fadeInDuration) {
     audio.volume = 0;
     activeAudioElements.add(audio);
     addPlayingLabel(src);
+    audioMotion.connectInput(audio);
 
     var triggeredNext = false;
 
@@ -143,6 +174,7 @@ function playTrack(src, fadeInDuration) {
         playingTracks.delete(src);
         activeAudioElements.delete(audio);
         removePlayingLabel(src);
+        audioMotion.disconnectInput(audio);
     });
 
     audio.play().catch(function (err) {
@@ -172,6 +204,7 @@ function fadeOutAndRemoveTrack(audio, duration) {
             playingTracks.delete(src);
             activeAudioElements.delete(audio);
             removePlayingLabel(src);
+            audioMotion.disconnectInput(audio);
         }
     });
 }
@@ -227,6 +260,7 @@ parentalCheckbox.addEventListener('change', function () {
 audioBtn.addEventListener('click', function () {
     if (!audioStarted) {
         audioStarted = true;
+        audioMotion.audioCtx.resume();
         startNextTrack();
 
         var rect = audioBtn.getBoundingClientRect();
