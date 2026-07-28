@@ -83,14 +83,13 @@ var playingLabels = new Map();
 // "roundBars + bar-level colorMode" preset from the audioMotion-analyzer
 // fluid demo (https://audiomotion.dev/demo/fluid.html).
 var audioMotion = new AudioMotionAnalyzer(document.getElementById('visualizer'), {
-    mode: 2,
+    mode: 4,
     alphaBars: false,
     ansiBands: false,
-    barSpace: 0.25,
+    barSpace: 0.20,
     channelLayout: 'single',
     colorMode: 'bar-level',
     frequencyScale: 'log',
-    gradient: 'prism',
     ledBars: false,
     linearAmplitude: true,
     linearBoost: 1.6,
@@ -109,6 +108,23 @@ var audioMotion = new AudioMotionAnalyzer(document.getElementById('visualizer'),
     smoothing: 0.7,
     weightingFilter: 'D'
 });
+
+// Custom gradient drawn from the Granim background palette (script.js),
+// running dark violet -> pink -> orange -> cyan -> near-white as amplitude
+// increases, so the loudest peaks stay bright/near-white for contrast
+// against whatever the shifting gradient background is doing.
+audioMotion.registerGradient('meaddesign', {
+    bgColor: '#000',
+    colorStops: [
+        { color: '#3d0a6e', level: 0.1 },
+        { color: '#ff2ea6', level: 0.3 },
+        { color: '#ff7a1a', level: 0.5 },
+        { color: '#22e6ff', level: 0.7 },
+        { color: '#f5feff', level: 0.85 },
+        { color: '#ffffff', level: 1 }
+    ]
+});
+audioMotion.gradient = 'meaddesign';
 
 var playingEl = document.getElementById('playing');
 playingEl.textContent = 'Playing: ';
