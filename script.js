@@ -107,3 +107,17 @@ document.fonts.ready.then(function () {
         });
     });
 });
+
+/* Menu script */
+const mainNav = document.querySelector('#mainnav');
+const hamburgerMenu = document.querySelector('.menu-btn');
+
+hamburgerMenu.addEventListener('click', function(){
+    hamburgerMenu.classList.toggle('is-active');
+    console.log(mainNav.className);
+    if(mainNav.className == 'menu-hidden'){
+        mainNav.className = 'menu-showing';
+    } else {
+        mainNav.className = 'menu-hidden';
+    }
+});
