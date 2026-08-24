@@ -1,3 +1,7 @@
+/* ---------- Background gradients (Granim) ---------- */
+/* Three layered instances at different transition speeds so their
+   phases drift relative to each other and the composite never repeats. */
+
 new Granim({
     element: '#granim-canvas-1',
     direction: 'diagonal',
@@ -49,6 +53,8 @@ new Granim({
     }
 });
 
+/* ---------- Logo animation (GSAP + SplitText) ---------- */
+
 gsap.registerPlugin(SplitText);
 
 gsap.to('h1', {
@@ -57,26 +63,29 @@ gsap.to('h1', {
     delay: 2
 });
 
+/* Wait for fonts so SplitText measures the final char metrics, not a fallback font. */
 document.fonts.ready.then(function () {
-    var split = new SplitText('h1', { type: 'chars' });
+    const split = new SplitText('h1', { type: 'chars' });
 
     function darken(hex, amount) {
-        var num = parseInt(hex.slice(1), 16);
-        var r = Math.round(((num >> 16) & 255) * (1 - amount));
-        var g = Math.round(((num >> 8) & 255) * (1 - amount));
-        var b = Math.round((num & 255) * (1 - amount));
+        const num = parseInt(hex.slice(1), 16);
+        const r = Math.round(((num >> 16) & 255) * (1 - amount));
+        const g = Math.round(((num >> 8) & 255) * (1 - amount));
+        const b = Math.round((num & 255) * (1 - amount));
         return '#' + [r, g, b].map(function (c) {
             return c.toString(16).padStart(2, '0');
         }).join('');
     }
 
-    var colors = ['#ffffff', '#ffd6f7', '#d6f3ff', '#fff2c2', '#e0d6ff']
+    const colors = ['#ffffff', '#ffd6f7', '#d6f3ff', '#fff2c2', '#e0d6ff']
         .map(function (hex) { return darken(hex, 0.3); });
 
-    var h1 = document.querySelector('h1');
-    var floatAmount = parseFloat(getComputedStyle(h1).fontSize) * 0.15;
+    const h1 = document.querySelector('h1');
+    /* floatAmount scales with the h1's rendered font-size (10vw), so the
+       float distance stays proportional to viewport width. */
+    let floatAmount = parseFloat(getComputedStyle(h1).fontSize) * 0.15;
 
-    var resizeTimeout;
+    let resizeTimeout;
     window.addEventListener('resize', function () {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(function () {
@@ -87,7 +96,7 @@ document.fonts.ready.then(function () {
     split.chars.forEach(function (char) {
         gsap.to(char, {
             y: function () { return -floatAmount; },
-            invalidateOnRepeat: true,
+            invalidateOnRepeat: true, // picks up the latest floatAmount each yoyo cycle, no restart needed
             duration: 1.2 + Math.random() * 1.2,
             repeat: -1,
             yoyo: true,
@@ -108,50 +117,54 @@ document.fonts.ready.then(function () {
     });
 });
 
-/* Menu script */
+/* ---------- Hamburger menu ---------- */
+
 const mainNav = document.querySelector('#mainnav');
 const hamburgerMenu = document.querySelector('.menu-btn');
 
-hamburgerMenu.addEventListener('click', function(){
+hamburgerMenu.addEventListener('click', function () {
     hamburgerMenu.classList.toggle('is-active');
-    console.log(mainNav.className);
-    if(mainNav.className == 'menu-hidden'){
-        mainNav.className = 'menu-showing';
-    } else {
-        mainNav.className = 'menu-hidden';
-    }
+    mainNav.classList.toggle('menu-showing');
+    mainNav.classList.toggle('menu-hidden');
 });
 
-/* About page script */
+/* ---------- About panel ---------- */
+
 const about = document.querySelector('#about');
 const aboutLink = document.querySelector('#about-link');
 const aboutClose = document.querySelector('#about-close');
 
+function isAboutOpen() {
+    return about.classList.contains('article-showing');
+}
+
 function showAbout() {
-    about.className = 'article-showing';
+    about.classList.remove('article-hidden');
+    about.classList.add('article-showing');
 }
 
 function hideAbout() {
-    about.className = 'article-hidden';
+    about.classList.remove('article-showing');
+    about.classList.add('article-hidden');
 }
 
-aboutLink.addEventListener('click', function(e){
+aboutLink.addEventListener('click', function (e) {
     e.preventDefault();
     showAbout();
 });
 
-aboutClose.addEventListener('click', function(){
-    hideAbout();
-});
+aboutClose.addEventListener('click', hideAbout);
 
-document.addEventListener('click', function(e){
-    if (about.className === 'article-showing' && !about.contains(e.target) && e.target !== aboutLink) {
+/* Closes on any click outside the panel, except the link that opens it
+   (otherwise the click that opens it would immediately close it again). */
+document.addEventListener('click', function (e) {
+    if (isAboutOpen() && !about.contains(e.target) && e.target !== aboutLink) {
         hideAbout();
     }
 });
 
-document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape' && about.className === 'article-showing') {
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && isAboutOpen()) {
         hideAbout();
     }
 });

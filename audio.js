@@ -3,7 +3,7 @@
 // be picked. Paths are relative to this file (i.e. inside the audio/
 // folder).
 // ---------------------------------------------------------------------
-var AUDIO_TRACKS = [
+const AUDIO_TRACKS = [
     'audio/07-Fluss.mp3',
     'audio/07-decent-sampler-1.mp3',
     'audio/07-decent-sampler2.mp3',
@@ -65,24 +65,30 @@ var AUDIO_TRACKS = [
     'audio/27-synthmaster.mp3',
 ];
 
-var FADE_IN_DURATION = 5;
-var TRIGGER_PROGRESS = 0.33;
-var MUTE_FADE_DURATION = 2;
-var TEXT_FADE_DURATION = 1;
-var REMIX_FADE_DURATION = 2;
-var REMIX_COOLDOWN = 20;
-var MAX_CONCURRENT_TRACKS = 3;
-var PRUNE_FADE_DURATION = 2;
-var PRUNE_CHECK_INTERVAL = 60000;
+/* ---------- Tuning constants ---------- */
 
-var playingTracks = new Set();
-var activeAudioElements = new Set();
-var isMuted = false;
-var playingLabels = new Map();
+const FADE_IN_DURATION = 5;
+const TRIGGER_PROGRESS = 0.33;
+const MUTE_FADE_DURATION = 2;
+const TEXT_FADE_DURATION = 1;
+const REMIX_FADE_DURATION = 2;
+const REMIX_COOLDOWN = 20;
+const MAX_CONCURRENT_TRACKS = 3;
+const PRUNE_FADE_DURATION = 2;
+const PRUNE_CHECK_INTERVAL = 60000;
+
+/* ---------- Playback state ---------- */
+
+const playingTracks = new Set();
+const activeAudioElements = new Set();
+const playingLabels = new Map();
+let isMuted = false;
+
+/* ---------- Visualizer setup ---------- */
 
 // "roundBars + bar-level colorMode" preset from the audioMotion-analyzer
 // fluid demo (https://audiomotion.dev/demo/fluid.html).
-var audioMotion = new AudioMotionAnalyzer(document.getElementById('visualizer'), {
+const audioMotion = new AudioMotionAnalyzer(document.querySelector('#visualizer'), {
     mode: 4,
     alphaBars: false,
     ansiBands: false,
@@ -126,14 +132,16 @@ audioMotion.registerGradient('meaddesign', {
 });
 audioMotion.gradient = 'meaddesign';
 
-var playingEl = document.getElementById('playing');
+/* ---------- "Playing:" label ---------- */
+
+const playingEl = document.querySelector('#playing');
 playingEl.textContent = 'Playing: ';
-var playingList = document.createElement('span');
+const playingList = document.createElement('span');
 playingList.id = 'playing-list';
 playingEl.appendChild(playingList);
 
 function addPlayingLabel(src) {
-    var span = document.createElement('span');
+    const span = document.createElement('span');
     span.textContent = src.split('/').pop();
     playingList.appendChild(span);
     gsap.to(span, { opacity: 1, duration: TEXT_FADE_DURATION });
@@ -141,7 +149,7 @@ function addPlayingLabel(src) {
 }
 
 function removePlayingLabel(src) {
-    var span = playingLabels.get(src);
+    const span = playingLabels.get(src);
     if (!span) {
         return;
     }
@@ -155,8 +163,10 @@ function removePlayingLabel(src) {
     });
 }
 
+/* ---------- Track selection / playback core ---------- */
+
 function pickRandomTrack() {
-    var available = AUDIO_TRACKS.filter(function (track) {
+    const available = AUDIO_TRACKS.filter(function (track) {
         return !playingTracks.has(track);
     });
 
@@ -170,14 +180,14 @@ function pickRandomTrack() {
 function playTrack(src, fadeInDuration) {
     playingTracks.add(src);
 
-    var audio = new Audio(src);
+    const audio = new Audio(src);
     audio.trackSrc = src;
     audio.volume = 0;
     activeAudioElements.add(audio);
     addPlayingLabel(src);
     audioMotion.connectInput(audio);
 
-    var triggeredNext = false;
+    let triggeredNext = false;
 
     audio.addEventListener('timeupdate', function () {
         if (!triggeredNext && audio.duration && audio.currentTime / audio.duration >= TRIGGER_PROGRESS) {
@@ -203,14 +213,14 @@ function playTrack(src, fadeInDuration) {
 }
 
 function startNextTrack() {
-    var track = pickRandomTrack();
+    const track = pickRandomTrack();
     if (track) {
         playTrack(track);
     }
 }
 
 function fadeOutAndRemoveTrack(audio, duration) {
-    var src = audio.trackSrc;
+    const src = audio.trackSrc;
 
     gsap.to(audio, {
         volume: 0,
@@ -226,12 +236,12 @@ function fadeOutAndRemoveTrack(audio, duration) {
 }
 
 function removeRandomActiveTrack(duration) {
-    var activeList = Array.from(activeAudioElements);
+    const activeList = Array.from(activeAudioElements);
     if (activeList.length === 0) {
         return;
     }
 
-    var audioToRemove = activeList[Math.floor(Math.random() * activeList.length)];
+    const audioToRemove = activeList[Math.floor(Math.random() * activeList.length)];
     fadeOutAndRemoveTrack(audioToRemove, duration);
 }
 
@@ -240,11 +250,15 @@ function remixOneTrack() {
         removeRandomActiveTrack(REMIX_FADE_DURATION);
     }
 
-    var track = pickRandomTrack();
+    const track = pickRandomTrack();
     if (track) {
         playTrack(track, REMIX_FADE_DURATION);
     }
 }
+
+/* ---------- Concurrency watchdog ---------- */
+/* Keeps the cascade within bounds: trims if it drifted above
+   MAX_CONCURRENT_TRACKS, restarts it if it ever dropped to zero. */
 
 setInterval(function () {
     if (activeAudioElements.size > MAX_CONCURRENT_TRACKS) {
@@ -254,14 +268,16 @@ setInterval(function () {
     }
 }, PRUNE_CHECK_INTERVAL);
 
-var audioBtn = document.getElementById('audio-btn');
-var audioStarted = false;
+/* ---------- UI wiring ---------- */
 
-var remixBtn = document.getElementById('remix');
-var remixLabelOff = remixBtn.textContent;
-var remixLabelOn = 'mess with the audio';
+const audioBtn = document.querySelector('#audio-btn');
+let audioStarted = false;
 
-var parentalCheckbox = document.querySelector('#parental input[type="checkbox"]');
+const remixBtn = document.querySelector('#remix');
+const remixLabelOff = remixBtn.textContent;
+const remixLabelOn = 'mess with the audio';
+
+const parentalCheckbox = document.querySelector('#parental input[type="checkbox"]');
 
 function currentRemixLabel() {
     return parentalCheckbox.checked ? remixLabelOn : remixLabelOff;
@@ -279,7 +295,7 @@ audioBtn.addEventListener('click', function () {
         audioMotion.audioCtx.resume();
         startNextTrack();
 
-        var rect = audioBtn.getBoundingClientRect();
+        const rect = audioBtn.getBoundingClientRect();
         gsap.set(audioBtn, { top: rect.top, left: rect.left, transform: 'none' });
         gsap.to(audioBtn, {
             top: 20,
@@ -287,7 +303,7 @@ audioBtn.addEventListener('click', function () {
             duration: 1,
             ease: 'power2.inOut',
             onComplete: function () {
-                var audioBtnRect = audioBtn.getBoundingClientRect();
+                const audioBtnRect = audioBtn.getBoundingClientRect();
                 gsap.set(remixBtn, { top: 20, left: audioBtnRect.right + 10 });
                 gsap.to(remixBtn, { opacity: 1, duration: 0.5 });
                 remixBtn.style.pointerEvents = 'auto';
@@ -308,12 +324,12 @@ audioBtn.addEventListener('click', function () {
 remixBtn.addEventListener('click', function () {
     remixOneTrack();
 
-    var remaining = REMIX_COOLDOWN;
+    let remaining = REMIX_COOLDOWN;
     remixBtn.disabled = true;
     gsap.to(remixBtn, { opacity: 0.5, duration: 0.3 });
     remixBtn.textContent = remaining + ' seconds';
 
-    var countdown = setInterval(function () {
+    const countdown = setInterval(function () {
         remaining -= 1;
         remixBtn.textContent = remaining + ' seconds';
 
