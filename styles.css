@@ -14,6 +14,12 @@ body {
     font-weight: 300;
     font-style: normal;
     padding-top: 200px;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#about p, #about h2 {
+    margin-bottom: 1em;
 }
 
 .granim-layer {
@@ -286,4 +292,29 @@ nav ul li img {
     display: block;
     width: 30px;
 
+}
+
+#about {
+    position: fixed;
+    top: 10%;
+    bottom:10%;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 650px;
+    padding: 20px;
+    border: 1px solid #000;
+    border-radius: 20px;
+    background-color: rgba(51, 51, 51, 0.8);
+    color: #fff;
+    font-weight: 600;
+    overflow-y: scroll;
+}
+
+.article-showing {
+    opacity: 1;
+    z-index: 1000;
+}
+.article-hidden {
+    opacity: 0;
+    z-index: -1000;
 }
