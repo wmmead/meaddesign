@@ -155,6 +155,60 @@ or real wall-clock waits):
   baked into the `setInterval(...)` call once at script load — use the
   Clock API for that one instead.
 
+## Menu (`#mainnav` in `index.html`)
+
+- Hamburger button (`.menu-btn`, bottom-right) toggles `#mainnav` between
+  `menu-hidden`/`menu-showing` via `classList.toggle` in `script.js` (not a
+  raw `className` assignment, so other classes on the element survive).
+  CSS transitions `nav`'s `top` between the two states over 500ms.
+- Nav list (`nav ul`) links to About, wmmead.com, and LinkedIn/GitHub icons.
+- **Border-under-button fix**: `.menu-btn` sits directly above the right
+  ~70px of `nav ul`, so `nav ul`'s own top border showed through underneath
+  it. Fixed with `clip-path: polygon(...)` on `nav ul` that clips away the
+  1px border strip under the button's footprint (from x=80px to the right
+  edge) while leaving the rounded top-left corner alone — see the comment
+  in `styles.css`. A naive `margin-bottom: -1px` overlap approach was tried
+  first and rejected: `.menu-btn` comes before `nav ul` in the DOM with no
+  `z-index` on either, so `nav ul` paints on top in the overlap zone
+  regardless of margin, and its background is translucent anyway. After
+  the clip-path fix, `.menu-btn` needed `position: relative; top: 1px;` to
+  nudge it down and line back up with the now-clipped edge.
+
+## About panel (`#about` in `index.html`)
+
+- Starts as `class="article-hidden"`. Toggled by `script.js`:
+  `#about-link` (in the nav) opens it, `#about-close` (an &times; button
+  in the top-right of the card) closes it, clicking anywhere outside the
+  card closes it, and Escape closes it. All four paths go through shared
+  `showAbout()`/`hideAbout()` helpers and an `isAboutOpen()` check (reads
+  `classList.contains('article-showing')`) rather than comparing raw
+  `className` strings.
+- `#about` has `transition: opacity 500ms ease` so both directions fade;
+  `.article-hidden` also sets `pointer-events: none` so the invisible card
+  can't eat clicks.
+- The library credits in the About text (Granim.js, Audiomotion, GSAP,
+  SplitText) are now links out to each project's page, styled via `#about a`.
+
+## Code cleanup pass (script.js / audio.js / styles.css)
+
+- `script.js` and `audio.js` split into labeled sections (mirrored across
+  both files: e.g. gradients/logo/menu/about in `script.js`; track config/
+  tuning constants/state/visualizer/playing-label/playback core/watchdog/
+  UI wiring in `audio.js`).
+- All `var` converted to `const`/`let` in both JS files.
+- `audio.js`'s four `document.getElementById(...)` calls converted to
+  `document.querySelector('#...')` for consistency with `script.js` (which
+  already used `querySelector` throughout).
+- `styles.css` reorganized into the same section order as the page's visual
+  flow (reset → gradient layers → hero/logo → visualizer → buttons →
+  playing label → parental toggle → menu → about panel); the orphaned
+  `#about p, #about h2` rule (previously stranded near the top of the file)
+  moved down next to the rest of the About rules.
+- Added `--glass-bg` / `--glass-border` custom properties on `:root` for the
+  frosted-glass look (`rgba(255,255,255,0.15)` bg / `rgba(255,255,255,0.6)`
+  border) that was previously hand-typed identically in four places
+  (`.btn`, `.menu-btn`, `nav ul`, `.slider`).
+
 ## Repo / tooling notes
 
 - Git repo initialized locally, pushed to
