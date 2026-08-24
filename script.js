@@ -121,3 +121,37 @@ hamburgerMenu.addEventListener('click', function(){
         mainNav.className = 'menu-hidden';
     }
 });
+
+/* About page script */
+const about = document.querySelector('#about');
+const aboutLink = document.querySelector('#about-link');
+const aboutClose = document.querySelector('#about-close');
+
+function showAbout() {
+    about.className = 'article-showing';
+}
+
+function hideAbout() {
+    about.className = 'article-hidden';
+}
+
+aboutLink.addEventListener('click', function(e){
+    e.preventDefault();
+    showAbout();
+});
+
+aboutClose.addEventListener('click', function(){
+    hideAbout();
+});
+
+document.addEventListener('click', function(e){
+    if (about.className === 'article-showing' && !about.contains(e.target) && e.target !== aboutLink) {
+        hideAbout();
+    }
+});
+
+document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && about.className === 'article-showing') {
+        hideAbout();
+    }
+});
