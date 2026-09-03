@@ -63,6 +63,49 @@ const AUDIO_TRACKS = [
     'audio/27-reverie-frozen-time.mp3',
     'audio/27-ruismaker-noir.mp3',
     'audio/27-synthmaster.mp3',
+    'audio/28-battlestation.mp3',
+    'audio/28-decent-sampler-2.mp3',
+    'audio/28-decent-sampler.mp3',
+    'audio/28-reverie-ancient-chant.mp3',
+    'audio/28-synthmaster-one.mp3',
+    'audio/29-decent-sampler.mp3',
+    'audio/29-dm10.mp3',
+    'audio/29-j6synth.mp3',
+    'audio/29-reverie-cathedral.mp3',
+    'audio/29-synthmaster-one.mp3',
+    'audio/30-backrooms-piano.mp3',
+    'audio/30-backrooms-piano2.mp3',
+    'audio/30-j6-synth.mp3',
+    'audio/30-reverie-warm-embrace.mp3',
+    'audio/30-synthmaster.mp3',
+    'audio/32-backrooms-piano.mp3',
+    'audio/32-jsynth.mp3',
+    'audio/32-mariana.mp3',
+    'audio/32-particle-chimes.mp3',
+    'audio/32-reverie-harmonic-healing.mp3',
+    'audio/35-backrooms-piano.mp3',
+    'audio/35-mariana.mp3',
+    'audio/35-playbeat.mp3',
+    'audio/35-reverie-infinite-drone.mp3',
+    'audio/36-hicord.mp3',
+    'audio/36-jsynth.mp3',
+    'audio/36-mariana.mp3',
+    'audio/36-reverie-frozen-time.mp3',
+    'audio/36-ruismaker-noir.mp3',
+    'audio/37-backrooms-piano.mp3',
+    'audio/37-dm10.mp3',
+    'audio/37-hichord.mp3',
+    'audio/37-mariana.mp3',
+    'audio/38-backrooms-piano.mp3',
+    'audio/38-jsynth.mp3',
+    'audio/38-mariana.mp3',
+    'audio/38-particle-chimes.mp3',
+    'audio/38-ruismaker-noir.mp3',
+    'audio/40-fluss.mp3',
+    'audio/40-jsynth.mp3',
+    'audio/40-mariana.mp3',
+    'audio/40-particle-chimes.mp3',
+    'audio/40-reverie-choral.mp3',
 ];
 
 /* ---------- Tuning constants ---------- */
@@ -76,6 +119,7 @@ const REMIX_COOLDOWN = 20;
 const MAX_CONCURRENT_TRACKS = 3;
 const PRUNE_FADE_DURATION = 2;
 const PRUNE_CHECK_INTERVAL = 60000;
+const VISIBILITY_FADE_DURATION = 3;
 
 /* ---------- Playback state ---------- */
 
@@ -267,6 +311,72 @@ setInterval(function () {
         startNextTrack();
     }
 }, PRUNE_CHECK_INTERVAL);
+
+/* ---------- Page visibility (tab/app switch) ---------- */
+/* Fades everything out and pauses when the tab/app loses visibility, then
+   resumes from wherever each track left off and fades back in when it
+   regains visibility. Respects the existing mute state on the way back in.
+   Uses a manual setTimeout-driven fade rather than gsap.to: GSAP's tween
+   engine runs on requestAnimationFrame, which browsers fully suspend for
+   hidden tabs, so a gsap fade started here would just freeze mid-fade
+   instead of completing in the background. setTimeout keeps firing (just
+   throttled) while hidden, so the fade-to-silence actually happens. */
+
+let pausedForVisibility = false;
+
+function fadeAudioVolume(audio, targetVolume, duration, onComplete) {
+    if (audio.visibilityFadeTimer) {
+        clearTimeout(audio.visibilityFadeTimer);
+    }
+
+    const startVolume = audio.volume;
+    const startTime = performance.now();
+    const durationMs = duration * 1000;
+
+    (function step() {
+        const t = Math.min((performance.now() - startTime) / durationMs, 1);
+        audio.volume = startVolume + (targetVolume - startVolume) * t;
+
+        if (t < 1) {
+            audio.visibilityFadeTimer = setTimeout(step, 50);
+        } else {
+            audio.visibilityFadeTimer = null;
+            if (onComplete) {
+                onComplete();
+            }
+        }
+    })();
+}
+
+document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+        if (activeAudioElements.size === 0) {
+            return;
+        }
+        pausedForVisibility = true;
+        activeAudioElements.forEach(function (audio) {
+            gsap.killTweensOf(audio);
+            fadeAudioVolume(audio, 0, VISIBILITY_FADE_DURATION, function () {
+                audio.pause();
+            });
+        });
+        return;
+    }
+
+    if (!pausedForVisibility) {
+        return;
+    }
+    pausedForVisibility = false;
+    activeAudioElements.forEach(function (audio) {
+        gsap.killTweensOf(audio);
+        audio.play().catch(function (err) {
+            console.error('Resume failed for ' + audio.trackSrc + ':', err);
+        });
+        if (!isMuted) {
+            fadeAudioVolume(audio, 1, VISIBILITY_FADE_DURATION);
+        }
+    });
+});
 
 /* ---------- UI wiring ---------- */
 

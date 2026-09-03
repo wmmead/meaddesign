@@ -94,6 +94,38 @@ the repo). If deploying, that folder needs to be uploaded separately.
     a raw style write on every tick until its tween finishes. Route it
     through `gsap.to(...)` instead so GSAP's own overwrite management
     handles the conflict correctly regardless of click timing.
+- **Page visibility handling** (`VISIBILITY_FADE_DURATION` = 3s):
+  - A `visibilitychange` listener fades every active track's volume to 0
+    over 3s and pauses it (`audio.pause()`, once the fade completes) when
+    the tab/app is hidden — leaving `currentTime` untouched so playback
+    resumes from the same spot rather than restarting.
+  - On return to visibility, calls `.play()` on every active track (picking
+    up where it left off) and fades volume back to 1 over 3s — unless
+    `isMuted` is true, in which case it stays at 0 (silent-but-playing,
+    consistent with how muted tracks already behave elsewhere).
+  - `pausedForVisibility` guards the resume path so it only fires after an
+    actual hide; a no-op early return handles the "nothing is playing yet"
+    case (`activeAudioElements.size === 0`).
+  - **Gotcha found while building this**: the fade is done with a hand-rolled
+    `fadeAudioVolume()` helper (`setTimeout`-driven, 50ms steps against a
+    `performance.now()` start time) rather than `gsap.to()`. Verified live in
+    Chrome that GSAP's tween engine runs on `requestAnimationFrame`, and rAF
+    callbacks are fully suspended by the browser the moment a tab is hidden
+    (confirmed: a `gsap.to()` tween's `.progress()` stayed at exactly `0` for
+    7+ real seconds with the tab backgrounded) — so a `gsap.to()` fade here
+    would just freeze mid-fade at whatever volume it was at, instead of
+    actually reaching 0 and pausing while the tab is in the background.
+    `setTimeout` keeps firing (throttled, but not stopped) in hidden tabs,
+    so `fadeAudioVolume()` reliably completes. `gsap.killTweensOf(audio)`
+    still runs first in both directions, to cancel any *other* in-flight
+    gsap tween on that element (initial 5s fade-in, a mute toggle, remix,
+    prune) before the manual fade takes over — same reasoning as the
+    remix-button opacity gotcha below.
+  - `fadeAudioVolume()` tracks its own pending timer on `audio.visibilityFadeTimer`
+    and clears it at the start of every call, so rapid flapping (hide/show
+    before the 3s fade completes) resumes cleanly from whatever volume the
+    in-flight fade had reached, rather than the old and new fades fighting
+    each other.
 - **Concurrency management** (a `setInterval` every `PRUNE_CHECK_INTERVAL`
   = 60s):
   - If more than `MAX_CONCURRENT_TRACKS` (3) tracks are playing (the
